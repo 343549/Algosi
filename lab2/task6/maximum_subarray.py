@@ -100,60 +100,84 @@ def calculate_price_changes(prices):
 
 
 if __name__ == "__main__":
-    # Пример с данными акций
-    # Для демонстрации используем упрощённые данные
-    # В реальном случае данные можно загрузить из файла или скачать с Google Finance
+    # Установка кодировки для вывода
+    import sys
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    
+    # Чтение данных из файла input.txt
+    # Формат:
+    # Строка 1: Название компании
+    # Строка 2: Период (например, "01.01.2024 - 31.01.2024")
+    # Далее: строки с датой и ценой (формат: "YYYY-MM-DD цена")
     
     print("=" * 60)
     print("Задача 6: Поиск максимальной прибыли")
     print("=" * 60)
     
-    # Пример: цены акций за несколько дней
-    # Формат: (день, цена)
-    stock_data = [
-        ("2024-01-01", 100),
-        ("2024-01-02", 105),
-        ("2024-01-03", 102),
-        ("2024-01-04", 108),
-        ("2024-01-05", 110),
-        ("2024-01-06", 107),
-        ("2024-01-07", 115),
-        ("2024-01-08", 112),
-    ]
-    
-    company_name = "Пример компании"
-    period = "01.01.2024 - 08.01.2024"
-    
-    # Извлекаем цены
-    prices = [price for _, price in stock_data]
-    dates = [date for date, _ in stock_data]
-    
-    print(f"Компания: {company_name}")
-    print(f"Период: {period}")
-    print(f"\nЦены акций по дням:")
-    for date, price in stock_data:
-        print(f"  {date}: {price}")
-    
-    # Вычисляем изменения цен
-    price_changes = calculate_price_changes(prices)
-    print(f"\nИзменения цен (прибыль/убыток за день):")
-    for i, change in enumerate(price_changes):
-        print(f"  День {i+1}→{i+2}: {change:+}")
-    
-    # Находим максимальный подмассив (максимальную прибыль)
-    if len(price_changes) > 0:
+    try:
+        with open('input.txt', 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+        
+        # Удаляем пробелы и пустые строки
+        lines = [line.strip() for line in lines if line.strip()]
+        
+        if len(lines) < 3:
+            print("Ошибка: недостаточно данных в файле input.txt")
+            exit(1)
+        
+        company_name = lines[0]
+        period = lines[1]
+        
+        # Читаем данные о ценах
+        stock_data = []
+        for line in lines[2:]:
+            parts = line.split()
+            if len(parts) >= 2:
+                date = parts[0]
+                try:
+                    price = float(parts[1])
+                    stock_data.append((date, price))
+                except ValueError:
+                    print(f"Предупреждение: не удалось распарсить цену в строке: {line}")
+        
+        if len(stock_data) < 2:
+            print("Ошибка: недостаточно данных о ценах (нужно минимум 2 дня)")
+            exit(1)
+        
+        # Извлекаем цены и даты
+        prices = [price for _, price in stock_data]
+        dates = [date for date, _ in stock_data]
+        
+        print(f"Компания: {company_name}")
+        print(f"Период: {period}")
+        print(f"\nЦены акций по дням (показаны первые и последние 5 дней):")
+        for i, (date, price) in enumerate(stock_data):
+            if i < 5 or i >= len(stock_data) - 5:
+                print(f"  {date}: {price:.2f}")
+            elif i == 5:
+                print(f"  ... (пропущено {len(stock_data) - 10} дней) ...")
+        
+        # Вычисляем изменения цен
+        price_changes = calculate_price_changes(prices)
+        print(f"\nВсего дней: {len(stock_data)}")
+        print(f"Изменений цен: {len(price_changes)}")
+        
+        # Находим максимальный подмассив (максимальную прибыль)
         buy_day_idx, sell_day_idx, max_profit = find_maximum_subarray(price_changes, 0, len(price_changes) - 1)
         
         # Индексы для дат: buy_day_idx соответствует дню покупки, sell_day_idx+1 - дню продажи
         buy_date = dates[buy_day_idx]
         sell_date = dates[sell_day_idx + 1]
+        buy_price = prices[buy_day_idx]
+        sell_price = prices[sell_day_idx + 1]
         
         print(f"\n{'='*60}")
         print("РЕЗУЛЬТАТ:")
         print(f"{'='*60}")
-        print(f"Дата покупки: {buy_date}")
-        print(f"Дата продажи: {sell_date}")
-        print(f"Максимальная прибыль: {max_profit}")
+        print(f"Дата покупки: {buy_date} (цена: {buy_price:.2f})")
+        print(f"Дата продажи: {sell_date} (цена: {sell_price:.2f})")
+        print(f"Максимальная прибыль: {max_profit:.2f}")
         print(f"{'='*60}")
         
         # Запись в файл
@@ -162,8 +186,11 @@ if __name__ == "__main__":
             f.write(f"Период изменения цен акций: {period}\n")
             f.write(f"Дата покупки: {buy_date}\n")
             f.write(f"Дата продажи: {sell_date}\n")
-            f.write(f"Максимальная прибыль: {max_profit}\n")
-    else:
-        print("\nНедостаточно данных для анализа")
-        with open('output.txt', 'w', encoding='utf-8') as f:
-            f.write("Недостаточно данных для анализа\n")
+            f.write(f"Максимальная прибыль: {max_profit:.2f}\n")
+            
+    except FileNotFoundError:
+        print("Ошибка: файл input.txt не найден")
+        exit(1)
+    except Exception as e:
+        print(f"Ошибка при обработке данных: {e}")
+        exit(1)
